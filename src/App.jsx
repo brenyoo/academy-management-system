@@ -649,6 +649,10 @@ const INITIAL_STAFF_MESSAGES = [
 ];
 
 export default function App() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [lang, setLang] = useState('KR');
   const [user, setUser] = useState(null);
@@ -657,7 +661,20 @@ export default function App() {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   
   const t = TRANSLATIONS[lang];
+  const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoginError('');
 
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    setPassword('');
+  } catch (error) {
+    console.error('Login error:', error);
+    setLoginError(
+      '로그인에 실패했습니다. 이메일과 비밀번호를 확인하세요.'
+    );
+  }
+};
   // App States
   const [classes, setClasses] = useState(INITIAL_CLASSES);
   const [students, setStudents] = useState(INITIAL_STUDENTS);
@@ -712,22 +729,21 @@ export default function App() {
     showToast('암호화되지 않은 JSON 백업 파일이 다운로드되었습니다. 안전하게 보관하세요.');
   };
 
-  useEffect(() => {
-    if (!auth) {
-      setIsCloudLoaded(true);
-      return;
-    }
-    const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (err) {
-        console.error('Auth error:', err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
+ 
+useEffect(() => {
+  if (!auth) {
+    setAuthLoading(false);
+    return;
+  }
+
+  const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    setUser(currentUser);
+    setAuthLoading(false);
+  });
+
+  return () => unsubscribe();
+}, []);
+
 
   useEffect(() => {
     if (!db || !user) return;
@@ -840,6 +856,73 @@ const stateDocRef = doc(
     withdrawn: 1,
     totalStudents: students.length
   };
+
+  // Firebase 로그인 상태 확인
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        로그인 상태 확인 중...
+      </div>
+    );
+  }
+
+  // Firebase 설정이 없으면 대시보드 접근 차단
+  if (!auth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Firebase 연결 설정을 확인해 주세요.
+      </div>
+    );
+  }
+
+  // 로그인하지 않은 경우 관리자 로그인 화면 표시
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <form
+          onSubmit={handleLogin}
+          className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm space-y-4"
+        >
+          <h1 className="text-2xl font-bold text-center text-indigo-600">
+            Agent AI 관리자 로그인
+          </h1>
+
+          <input
+            type="email"
+            placeholder="관리자 이메일"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full border rounded-lg p-3"
+          />
+
+          <input
+            type="password"
+            placeholder="비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full border rounded-lg p-3"
+          />
+
+          {loginError && (
+            <p className="text-red-600 text-sm">
+              {loginError}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 text-white p-3 rounded-lg"
+          >
+            로그인
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  // 로그인 성공 후 기존 대시보드 표시
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-white text-slate-900 font-sans tracking-tight antialiased" style={{ fontFamily: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif' }}>
