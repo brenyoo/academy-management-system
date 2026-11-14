@@ -731,7 +731,17 @@ export default function App() {
 
   useEffect(() => {
     if (!db || !user) return;
-    const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'academy_os', 'main_state');
+    
+const stateDocRef = doc(
+  db,
+  'academies',
+  appId,
+  'users',
+  user.uid,
+  'data',
+  'main_state'
+);
+
     
     const unsubscribe = onSnapshot(
       stateDocRef,
@@ -769,7 +779,17 @@ export default function App() {
       },
       (error) => {
         console.error('Sync listener error:', error);
-        setIsCloudLoaded(true);
+       
+const stateDocRef = doc(
+  db,
+  'academies',
+  appId,
+  'users',
+  user.uid,
+  'data',
+  'main_state'
+);
+
       }
     );
 
